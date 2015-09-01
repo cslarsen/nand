@@ -4,17 +4,29 @@ NOT-AND gate.
 Written and put in the public domain by Christian Stigen Larsen.
 
     def truth(op):
-        """Prints truth table for an operator."""
+        """Prints truth table for an operator.
+
+        For example, we can write
+
+            >>> truth(NAND)
+            NAND(0,0) ==> 1
+            NAND(0,1) ==> 1
+            NAND(1,0) ==> 1
+            NAND(1,1) ==> 0
+        """
         for x in (0,1):
             for y in (0,1):
                 print("%s(%d,%d) ==> %d" % (op.__name__, x, y, op(x,y)))
 
     def NAND(x,y):
         """
-        nand(0,0) ==> 1
-        nand(0,1) ==> 1
-        nand(1,0) ==> 1
-        nand(1,1) ==> 0
+        This is our primitive. We'll simply define this by hand. The truth table
+        is:
+
+            nand(0,0) ==> 1
+            nand(0,1) ==> 1
+            nand(1,0) ==> 1
+            nand(1,1) ==> 0
         """
         if (x,y) == (0,0): return 1
         if (x,y) == (0,1): return 1
@@ -23,33 +35,23 @@ Written and put in the public domain by Christian Stigen Larsen.
 
     def NOT(x):
         """
+        Negates its input. The truth table is thus:
+
             not(0) ==> 1
             not(1) ==> 0
 
-        By looking at the NAND table, we see that we are interested in the outputs
-        that will result in 0 and 1. The two last rows have this property, and we
-        then notice that in those cases, the inputs are equal. We get
+        We want to implement this in terms of NAND. Looking at NAND's truth table,
+        we see that the top and bottom rows give the right output. What's special
+        about the inputs for these rows is that they're equal. Therefore we can
+        simply state
 
             not(x) := nand(x,x)
-            not(0) ==> nand(0,0) ==> 1
-            not(1) ==> nand(1,1) ==> 0
-
-        An alternative is NOT(x) := NAND(x,x) which I think is more elegant
-        (thinking about actual circuits, we could just connect the two NAND inputs
-        to the same wire).
         """
         return NAND(x,x)
 
     def AND(x,y):
         """
-        The truth table is:
-
-            and(0,0) ==> 0
-            and(0,1) ==> 0
-            and(1,0) ==> 0
-            and(1,1) ==> 1
-
-        But NAND is "not-and", so we can just reverse the result from NAND:
+        AND is the negation of NAND, so we can straight out write
 
             and(x,y) := not(nand(x,y))
         """
@@ -57,42 +59,60 @@ Written and put in the public domain by Christian Stigen Larsen.
 
     def OR(x,y):
         """
-        This gate is a bit more tricky. The truth table is:
+        This gate is a bit more tricky. We'll start by writing out the truth table
+        alongside NAND:
 
-            or(0,0) ==> 0
-            or(0,1) ==> 1
-            or(1,0) ==> 1
-            or(1,1) ==> 1
+            or(0,0) ==> 0    nand(0,0) ==> 1
+            or(0,1) ==> 1    nand(0,1) ==> 1
+            or(1,0) ==> 1    nand(1,0) ==> 1
+            or(1,1) ==> 1    nand(1,1) ==> 0
 
-        This is almost the same as the NAND. I don't have a good pedagogical way of
-        showing this, but we don't have many primitives, and AND is just NAND
-        reversed. So what happens if we negate both inputs to NAND?
+        We clearly see that if we could flip the NAND *outputs* vertically, we'd
+        get the OR operator. We can't simply negate NAND's output (that would
+        give us AND), but if we negate the *inputs*, we will be able to do exactly
+        that:
 
-            >>> truth(lambda x,y: NAND(NOT(x), NOT(y)))
-            <lambda>(0,0) ==> 0
-            <lambda>(0,1) ==> 1
-            <lambda>(1,0) ==> 1
-            <lambda>(1,1) ==> 1
+            nand(not(x), not(y)) gives
+            (x,y) = (0,0) ==> nand(1,1) ==> 0
+            (x,y) = (0,1) ==> nand(1,0) ==> 1
+            (x,y) = (1,0) ==> nand(0,1) ==> 1
+            (x,y) = (1,1) ==> nand(0,0) ==> 1
 
-        Hey, this is the OR operator!
+        So, we get
 
-            OR(x,y) := NAND(NOT(x), NOT(y))
+            or(x,y) := nand(not(x), not(y))
         """
         return NAND(NOT(x), NOT(y))
 
     def XOR(x,y):
         """
-        >>> truth(lambda x,y: AND(OR(x,y), NAND(x,y)))
-        <lambda>(0,0) ==> 0
-        <lambda>(0,1) ==> 1
-        <lambda>(1,0) ==> 1
-        <lambda>(1,1) ==> 0
+        The exclusive-or truth table is
+
+            xor(0,0) ==> 0
+            xor(0,1) ==> 1
+            xor(1,0) ==> 1
+            xor(1,1) ==> 0
+
+        By juxtapositioning OR and NAND, as shown above, we see that their outputs
+        are
+
+             x,y   OR   NAND  XOR
+             0 0    0     1     0
+             0 1    1     1     1
+             1 0    1     1     1
+             1 1    1     0     0
+
+        So, if we AND the OR and NAND results together, we'll get XOR:
+
+            xor(x,y) := and(or(x,y), nand(x,y))
         """
         return AND(OR(x,y), NAND(x,y))
 
     def EQ(x,y):
         """
-        Looking at XOR, this would be its negation.
+        The equals operator (is x == y?) is actually the negation of the XOR, as
+        can be seen in XOR truth table. We simply write out
+
+            eq(x,y) := not(xor(x,y))
         """
         return NOT(XOR(x,y))
-
